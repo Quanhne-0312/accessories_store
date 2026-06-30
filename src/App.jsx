@@ -6,13 +6,15 @@ import { useEffect } from 'react';
 import NotFound from './pages/NotFound';
 
 function ScrollToTop() {
-    const { pathname, search } = useLocation();
+    const { pathname, search, hash } = useLocation();
 
     useEffect(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-    }, [pathname, search]);
+        window.requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        });
+    }, [pathname, search, hash]);
 
     return null;
 }

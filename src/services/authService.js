@@ -7,7 +7,7 @@ import store from '../redux/store';
 export const loginService = async (username, password) => {
     const path = 'auth/customer/login';
     const payload = {
-        username,
+        username: username.trim(),
         password,
     };
     try {
@@ -15,6 +15,10 @@ export const loginService = async (username, password) => {
         return result;
     } catch (error) {
         console.log(error);
+        return error?.response?.data ?? {
+            code: 'NETWORK_ERROR',
+            message: 'Không thể kết nối tới máy chủ.',
+        };
     }
 };
 
@@ -28,6 +32,10 @@ export const registerService = async (data) => {
         return result;
     } catch (error) {
         console.log(error);
+        return error?.response?.data ?? {
+            code: 'NETWORK_ERROR',
+            message: 'Không thể kết nối tới máy chủ.',
+        };
     }
 };
 

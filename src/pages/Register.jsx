@@ -107,7 +107,7 @@ function Register() {
             setSubmitable(false);
         }
 
-        if (_.isEqual(password, confirm_password)) {
+        if (_.isEmpty(confirm_password) || _.isEqual(password, confirm_password)) {
             setMessage(null);
         } else {
             setMessage('Xác nhận mật khẩu không khớp, kiểm tra lại!');
