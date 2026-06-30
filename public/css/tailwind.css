@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        font-family: 'Montserrat', sans-serif;
+    }
+}
+
+.filter-dropdown {
+    @apply absolute right-0 top-[calc(100%+2px)] z-10 h-max w-max min-w-[160px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md transition-all duration-300;
+}
+.custom-select-option {
+    @apply relative h-11 w-full min-w-[200px] cursor-pointer;
+}
+.custom-select-option .select {
+    @apply h-full w-full rounded-[7px] border border-blue-gray-200 bg-transparent px-3 py-3 text-left font-sans text-sm font-normal text-blue-gray-700 outline outline-0 transition-all focus:outline-0;
+}
+.custom-select-option .label {
+    @apply pointer-events-none absolute left-0 -top-1.5 flex h-full w-full select-none font-normal transition-all before:content-[''] after:content-[''];
+    @apply before:pointer-events-none before:mt-[6.5px] before:mr-1 before:box-border before:block before:h-1.5 before:w-2.5 before:rounded-tl-md before:transition-all;
+    @apply after:pointer-events-none after:mt-[6.5px] after:ml-1 after:box-border after:block after:h-1.5 after:w-2.5 after:flex-grow after:rounded-tr-md after:transition-all;
+}
+.custom-select-option .label.minimize {
+    @apply text-[11px] leading-tight text-blue-gray-400 before:border-t before:border-l before:border-blue-gray-200 after:border-t after:border-r after:border-blue-gray-200;
+}
+.custom-select-option .options {
+    @apply max-h-60 w-full overflow-auto bg-white p-2 text-sm font-normal text-blue-gray-500;
+}
+.custom-select-option .option-item {
+    @apply cursor-pointer select-none rounded-md p-2 pt-[9px] leading-tight outline outline-0 transition-all hover:bg-blue-gray-50 hover:bg-opacity-80 hover:text-blue-gray-900 focus:bg-blue-gray-50 focus:bg-opacity-80 focus:text-blue-gray-900;
+}
+.custom-select-option.open .select {
+    @apply border-2 border-blue-500 border-t-transparent text-blue-500;
+}
+.custom-select-option.open .label.minimize {
+    @apply text-blue-500 before:border-t-2 before:border-l-2 before:border-blue-500 after:border-t-2 after:border-r-2 after:border-blue-500;
+}
+.description ul {
+    @apply grid list-disc gap-2 pl-4;
+}
