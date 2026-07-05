@@ -1,4 +1,11 @@
-import { HandThumbUpIcon, ShieldCheckIcon, SparklesIcon, StarIcon, TruckIcon } from '@heroicons/react/24/outline';
+import {
+    ChevronDownIcon,
+    HandThumbUpIcon,
+    ShieldCheckIcon,
+    SparklesIcon,
+    StarIcon,
+    TruckIcon,
+} from '@heroicons/react/24/outline';
 import React, { useEffect, useState } from 'react';
 
 import CustomDetailsSection, { CustomDetailsSkeleton } from '@/components/layouts/CustomDetailsSection';
@@ -12,7 +19,7 @@ import CustomProductTestimonialSection from '@/components/layouts/CustomProductT
 function ProductDetails() {
     const [isLoading, setLoading] = useState(false);
     const [productData, setProductData] = useState(null);
-    const [open, setOpen] = React.useState(0);
+    const [open, setOpen] = React.useState(1);
     const { slug } = useParams();
 
     const handleGetProductBySlug = async (currentSlug) => {
@@ -26,6 +33,7 @@ function ProductDetails() {
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        setOpen(1);
         handleGetProductBySlug(slug);
     }, [slug]);
 
@@ -94,7 +102,17 @@ function ProductDetails() {
             </div>
             <div className="mx-auto grid max-w-[1440px] gap-4 px-4 md:grid-cols-2">
                 {productData && (
-                    <Accordion className="md:col-span-2" open={open === 1}>
+                    <Accordion
+                        className="md:col-span-2"
+                        open={open === 1}
+                        icon={
+                            <ChevronDownIcon
+                                className={`h-4 w-4 text-blue-gray-400 transition-transform duration-300 ${
+                                    open === 1 ? 'rotate-180' : ''
+                                }`}
+                            />
+                        }
+                    >
                         <AccordionHeader className="text-lg" onClick={() => handleOpen(1)}>
                             Chi tiết sản phẩm
                         </AccordionHeader>

@@ -227,13 +227,13 @@ function CustomHeader() {
                                             <Accordion
                                                 open={openAccordion === path}
                                                 icon={
-                                                    <IconButton size="sm" variant="text">
+                                                    <span className="grid h-8 w-8 place-items-center rounded text-blue-gray-500">
                                                         {openAccordion === path ? (
                                                             <MinusSmallIcon className="h-5 w-5" />
                                                         ) : (
                                                             <PlusSmallIcon className="h-5 w-5" />
                                                         )}
-                                                    </IconButton>
+                                                    </span>
                                                 }
                                             >
                                                 <AccordionHeader
@@ -242,9 +242,9 @@ function CustomHeader() {
                                                         setOpenAccordion((current) => (current === path ? false : path))
                                                     }
                                                 >
-                                                    <Button fullWidth variant="text" className="flex">
+                                                    <span className="flex w-full px-6 py-3 text-xs font-bold uppercase text-blue-gray-500">
                                                         {title}
-                                                    </Button>
+                                                    </span>
                                                 </AccordionHeader>
                                                 <AccordionBody className="pt-0 text-sm font-normal">
                                                     {children.map((child) => (
@@ -290,13 +290,13 @@ function CustomHeader() {
                                         <Accordion
                                             open={openAccordion === 'account'}
                                             icon={
-                                                <IconButton size="sm" variant="text">
+                                                <span className="grid h-8 w-8 place-items-center rounded text-blue-gray-500">
                                                     {openAccordion === 'account' ? (
                                                         <MinusSmallIcon className="h-5 w-5" />
                                                     ) : (
                                                         <PlusSmallIcon className="h-5 w-5" />
                                                     )}
-                                                </IconButton>
+                                                </span>
                                             }
                                         >
                                             <AccordionHeader

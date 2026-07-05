@@ -6,6 +6,7 @@ import CustomSelectShippingAddressCard from '@/components/cards/CustomSelectShip
 import CustomVoucherSubmitForm from '@/components/layouts/CustomVoucherSubmitForm';
 import { cartItemRemoveAll } from '@/redux/actions/cartActions';
 import { userPlaceNewOrder } from '@/redux/actions/userAction';
+import { persistor } from '@/redux/store';
 import { routes } from '@/routes';
 import { orderService } from '@/services';
 import { Button, Input, Spinner, Textarea, Typography } from '@material-tailwind/react';
@@ -135,9 +136,21 @@ function Checkout() {
             if (response) {
                 const { code, result } = response;
                 if (code === 'SUCCESS') {
+                    const orderUuid = result?.order_uuid || result;
+
+                    if (orderUuid) {
+                        sessionStorage.setItem('checkoutSuccessOrderUuid', orderUuid);
+                    }
+
                     dispatch(cartItemRemoveAll());
-                    dispatch(userPlaceNewOrder(result));
-                    navigate(routes.checkoutSuccess);
+                    dispatch(userPlaceNewOrder(orderUuid));
+                    await persistor.flush();
+                    navigate(routes.checkoutSuccess, {
+                        replace: true,
+                        state: {
+                            orderUuid,
+                        },
+                    });
                 }
             }
         } catch (error) {

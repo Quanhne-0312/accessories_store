@@ -1,15 +1,22 @@
 import CustomOrderCard from '@/components/cards/CustomOrderCard';
+import CustomConfirmDialog from '@/components/layouts/CustomConfirmDialog';
 import { orderService } from '@/services';
 import { Card, CardBody, Typography } from '@material-tailwind/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 
 function Orders() {
     const [isLoading, setLoading] = useState(false);
+    const [dialog, setDialog] = useState({});
     const [orders, setOrders] = useState([]);
     const { isLogged, data: currentUser } = useSelector((state) => state.auth);
-    const orderUuids = useSelector((state) => state.user.orders);
+    const persistedOrderUuids = useSelector((state) => state.user.orders);
+    const orderUuids = useMemo(
+        () => (Array.isArray(persistedOrderUuids) ? persistedOrderUuids : []),
+        [persistedOrderUuids],
+    );
+    const orderUuidsKey = orderUuids.join(',');
     let [searchParams, setSearchParams] = useSearchParams();
 
     const handleGetOrdersBy = async (order_uuids, phone_number) => {
@@ -21,16 +28,86 @@ function Orders() {
         setLoading(false);
     };
 
+    const refreshOrders = () => {
+        if (isLogged) {
+            const phoneNumber = currentUser?.phone_number;
+            if (phoneNumber) {
+                handleGetOrdersBy(null, phoneNumber);
+            }
+            return;
+        }
+
+        const encodedOrderUuids = encodeURIComponent(orderUuidsKey);
+        handleGetOrdersBy(encodedOrderUuids, null);
+    };
+
+    const handleCloseDialog = () => {
+        setDialog((prevState) => ({
+            ...prevState,
+            open: false,
+        }));
+    };
+
+    const handleOpenCancelDialog = (order) => {
+        setDialog({
+            open: true,
+            status: 'WARNING',
+            title: 'Hủy đơn hàng',
+            text: `Xác nhận hủy đơn hàng #${order.order_uuid}?`,
+            btnCancel: 'Không',
+            btnDelete: 'Hủy đơn',
+            handler: handleCloseDialog,
+            onCancel: handleCloseDialog,
+            onDelete: () => handleCancelOrder(order.order_uuid),
+        });
+    };
+
+    const handleCancelOrder = async (orderUuid) => {
+        setDialog((prevState) => ({
+            ...prevState,
+            status: 'PENDING',
+            text: 'Đang hủy đơn hàng...',
+            btnCancel: null,
+            btnDelete: null,
+        }));
+
+        const response = await orderService.cancelOrderService(orderUuid);
+
+        if (response?.code === 'SUCCESS') {
+            setDialog((prevState) => ({
+                ...prevState,
+                status: 'SUCCESS',
+                text: 'Hủy đơn hàng thành công!',
+                btnConfirm: 'Đã hiểu',
+                onConfirm: () => {
+                    handleCloseDialog();
+                    refreshOrders();
+                },
+            }));
+        } else {
+            setDialog((prevState) => ({
+                ...prevState,
+                status: 'ERROR',
+                text: response?.message || 'Hủy đơn hàng không thành công!',
+                btnConfirm: 'Đóng',
+                onConfirm: handleCloseDialog,
+            }));
+        }
+    };
+
     useEffect(() => {
         if (isLogged) {
-            setSearchParams(`users=${currentUser.phone_number}`);
-            handleGetOrdersBy(null, currentUser.phone_number);
+            const phoneNumber = currentUser?.phone_number;
+            if (!phoneNumber) return;
+
+            setSearchParams(`users=${phoneNumber}`);
+            handleGetOrdersBy(null, phoneNumber);
         } else {
-            const encodedOrderUuids = encodeURIComponent(orderUuids.join(','));
+            const encodedOrderUuids = encodeURIComponent(orderUuidsKey);
             setSearchParams(`orders=${orderUuids.join('+')}`);
             handleGetOrdersBy(encodedOrderUuids, null);
         }
-    }, [orderUuids, isLogged, currentUser]);
+    }, [orderUuidsKey, isLogged, currentUser?.phone_number]);
 
     return (
         <div>
@@ -47,7 +124,7 @@ function Orders() {
                     ) : orders.length > 0 ? (
                         orders.map((order, index) => (
                             <li key={index} className="mt-4">
-                                <CustomOrderCard data={order} />
+                                <CustomOrderCard data={order} onCancel={isLogged ? handleOpenCancelDialog : undefined} />
                             </li>
                         ))
                     ) : (
@@ -61,6 +138,7 @@ function Orders() {
                     )}
                 </ul>
             </div>
+            <CustomConfirmDialog {...dialog} />
         </div>
     );
 }

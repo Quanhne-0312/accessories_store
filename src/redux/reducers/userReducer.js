@@ -7,11 +7,15 @@ const initState = {
 
 const userReducer = (state = initState, action) => {
     switch (action.type) {
-        case UserActionTypes.placeNewOrder:
+        case UserActionTypes.placeNewOrder: {
+            const currentOrders = Array.isArray(state.orders) ? state.orders : [];
+            const orderUuid = action.payload?.order_uuid;
+
             return {
                 ...state,
-                orders: [action.payload.order_uuid, ...state.orders],
+                orders: orderUuid ? [orderUuid, ...currentOrders] : currentOrders,
             };
+        }
 
         case UserActionTypes.removeAllOrders:
             return {

@@ -1,12 +1,26 @@
-import { Button, Card, Typography } from '@material-tailwind/react';
-import React from 'react';
-import CustomCurrencyDisplay from '../shared/CustomCurrencyDisplay';
-import CustomOrderProductCard from './CustomOrderProductCard';
-import CustomTextLoading from '../shared/CustomTextLoading';
-import { Link } from 'react-router-dom';
 import { routes } from '@/routes';
+import { Button, Card, Chip, Typography } from '@material-tailwind/react';
+import { Link } from 'react-router-dom';
+import CustomCurrencyDisplay from '../shared/CustomCurrencyDisplay';
+import CustomTextLoading from '../shared/CustomTextLoading';
+import CustomOrderProductCard from './CustomOrderProductCard';
 
-function CustomOrderCard({ data }) {
+const statusMeta = {
+    PROCESSED: { text: 'Đã tiếp nhận', color: 'blue' },
+    CONFIRMED: { text: 'Đã xác nhận', color: 'cyan' },
+    ON_SHIPPED: { text: 'Đang giao hàng', color: 'amber' },
+    FINISHED: { text: 'Hoàn thành', color: 'green' },
+    CANCELED: { text: 'Đã hủy', color: 'red' },
+};
+
+function CustomOrderCard({ data, onCancel }) {
+    const status = data?.status || {};
+    const meta = statusMeta[status.code] || {
+        text: status.description || status.code || 'Trạng thái',
+        color: 'blue-gray',
+    };
+    const canCancel = typeof onCancel === 'function' && [1, 2].includes(Number(status.id));
+
     return (
         <Card className="p-4">
             {data ? (
@@ -17,7 +31,7 @@ function CustomOrderCard({ data }) {
                     </div>
                     <ul className="my-4 grid gap-1 border-y md:grid-cols-3 md:gap-3">
                         {data.items.slice(0, 3).map((item, index) => (
-                            <li key={index} className="">
+                            <li key={index}>
                                 <CustomOrderProductCard data={item} />
                             </li>
                         ))}
@@ -36,21 +50,20 @@ function CustomOrderCard({ data }) {
                             value={Number(data.total)}
                         />
                     </div>
-                    <div className="mt-8 flex items-center justify-end">
-                        {data.status.id > 1 ? (
-                            <Button variant="text" size="sm" color="green">
-                                <span className="relative top-px">Đã nhận hàng</span>
-                            </Button>
-                        ) : (
-                            <Button variant="text" size="sm" color="red">
-                                <span className="relative top-px">Hủy đơn</span>
-                            </Button>
-                        )}
-                        <Link to={routes.orderDetails.replace(':order_uuid', data.order_uuid)}>
-                            <Button variant="text" size="sm" color="blue">
-                                <span className="relative top-px">Chi tiết</span>
-                            </Button>
-                        </Link>
+                    <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+                        <Chip value={meta.text} color={meta.color} className="w-max py-px text-xs" />
+                        <div className="flex items-center justify-end">
+                            {canCancel && (
+                                <Button variant="text" size="sm" color="red" onClick={() => onCancel?.(data)}>
+                                    <span className="relative top-px">Hủy đơn</span>
+                                </Button>
+                            )}
+                            <Link to={routes.orderDetails.replace(':order_uuid', data.order_uuid)}>
+                                <Button variant="text" size="sm" color="blue">
+                                    <span className="relative top-px">Chi tiết</span>
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
                 </>
             ) : (

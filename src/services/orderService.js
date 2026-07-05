@@ -59,3 +59,15 @@ export const getOrdersByConditionService = async (order_uuids, phone_number) => 
         console.log(error);
     }
 };
+
+export const cancelOrderService = async (order_uuid) => {
+    const path = 'order/customer-cancel';
+
+    try {
+        const result = await authorizationRequest.postApi(path, { order_uuid });
+        return result;
+    } catch (error) {
+        console.log(error);
+        return error.response?.data;
+    }
+};
