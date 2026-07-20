@@ -9,33 +9,45 @@ import { orderService } from '@/services';
 
 import { Card, CardBody, CardHeader, Input, Typography } from '@material-tailwind/react';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 function OrderDetails() {
     const [isLoading, setLoading] = useState(false);
     const [orderData, setOrderData] = useState(null);
     const { order_uuid } = useParams();
+    const requestIdRef = useRef(0);
 
     const handleGetOrderByUuid = async (order_uuid) => {
+        const requestId = ++requestIdRef.current;
+
         try {
             setLoading(true);
             const response = await orderService.getOneOrderByUuidService(order_uuid);
-            if (response) {
-                const { code, message, result } = response;
-                if (code === 'SUCCESS') {
-                    setOrderData(result);
-                }
+            if (requestId !== requestIdRef.current) return;
+
+            if (response?.code === 'SUCCESS' && response.result && typeof response.result === 'object') {
+                setOrderData(response.result);
+            } else {
+                setOrderData(null);
             }
         } catch (error) {
+            if (requestId !== requestIdRef.current) return;
             console.log(error);
+            setOrderData(null);
         } finally {
-            setLoading(false);
+            if (requestId === requestIdRef.current) {
+                setLoading(false);
+            }
         }
     };
 
     useEffect(() => {
         handleGetOrderByUuid(order_uuid);
+
+        return () => {
+            requestIdRef.current += 1;
+        };
     }, [order_uuid]);
 
     const items = [

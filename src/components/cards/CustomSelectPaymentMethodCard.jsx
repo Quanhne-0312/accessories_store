@@ -3,8 +3,8 @@ import { Accordion, AccordionBody, AccordionHeader, Radio, Typography } from '@m
 import { useEffect, useState } from 'react';
 
 function CustomSelectPaymentMethodCard({ onChangePaymentMethod }) {
-    const [open, setOpen] = useState(1);
-    const [paymentMethods, setPaymentMethods] = useState(null);
+    const [open, setOpen] = useState(null);
+    const [paymentMethods, setPaymentMethods] = useState([]);
 
     const handleOpen = (value) => setOpen(value);
 
@@ -12,16 +12,20 @@ function CustomSelectPaymentMethodCard({ onChangePaymentMethod }) {
         const handleGetPaymentMethods = async () => {
             const response = await orderService.getPaymentMethodsService();
             if (response && response.code === 'SUCCESS') {
-                setPaymentMethods(response.result);
+                const methods = Array.isArray(response.result) ? response.result : [];
+                setPaymentMethods(methods);
+                setOpen((current) =>
+                    methods.some((item) => item.id === current) ? current : methods[0]?.id ?? null,
+                );
             }
         };
         handleGetPaymentMethods();
     }, []);
 
     useEffect(() => {
-        if(paymentMethods){
-            const method = paymentMethods.find(item => item.id === open)
-            onChangePaymentMethod(method)
+        if (paymentMethods.length > 0) {
+            const method = paymentMethods.find((item) => item.id === open);
+            onChangePaymentMethod?.(method);
         }
     }, [open, paymentMethods]);
 
@@ -34,8 +38,7 @@ function CustomSelectPaymentMethodCard({ onChangePaymentMethod }) {
             <Typography className="text-xs">Toàn bộ các giao dịch được bảo mật và mã hóa</Typography>
 
             <div className="border-t border-blue-gray-100">
-                {paymentMethods &&
-                    paymentMethods.map((item) => (
+                {paymentMethods.map((item) => (
                         <Accordion
                             key={item.id}
                             open={open === item.id}

@@ -72,10 +72,11 @@ function CustomSelectOption({
             return;
         }
 
-        const filtered = (options || []).filter((item) =>
-            item.name
+        const normalizedKeyword = keyword.toLowerCase();
+        const filtered = (Array.isArray(options) ? options : []).filter((item) =>
+            String(item?.name || '')
                 .toLowerCase()
-                .includes(keyword.toLowerCase()),
+                .includes(normalizedKeyword),
         );
 
         setData(filtered);
@@ -103,9 +104,9 @@ function CustomSelectOption({
                                 : 'text-sm leading-[4.1]'
                         }`}
                     >
-                        {variant.label}
+                        {variant?.label || ''}
 
-                        {variant.required && (
+                        {variant?.required && (
                             <span className="ml-1 font-semibold text-red-500">
                                 *
                             </span>
@@ -155,15 +156,15 @@ function CustomSelectOption({
                                     </div>
                                 </li>
                             ) : data.length > 0 ? (
-                                data.map((item) => (
+                                data.filter(Boolean).map((item, index) => (
                                     <li
-                                        key={item.code}
+                                        key={item.code || item.name || index}
                                         className="option-item cursor-pointer hover:bg-blue-50"
                                         onClick={() =>
-                                            handleSelect(item.name)
+                                            handleSelect(item.name || '')
                                         }
                                     >
-                                        <span>{item.name}</span>
+                                        <span>{item.name || ''}</span>
                                     </li>
                                 ))
                             ) : (

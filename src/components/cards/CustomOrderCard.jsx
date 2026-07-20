@@ -15,6 +15,8 @@ const statusMeta = {
 
 function CustomOrderCard({ data, onCancel }) {
     const status = data?.status || {};
+    const items = Array.isArray(data?.items) ? data.items.filter(Boolean) : [];
+    const updatedAt = typeof data?.updatedAt === 'string' ? data.updatedAt.slice(0, 10) : '';
     const meta = statusMeta[status.code] || {
         text: status.description || status.code || 'Trạng thái',
         color: 'blue-gray',
@@ -27,18 +29,18 @@ function CustomOrderCard({ data, onCancel }) {
                 <>
                     <div className="flex items-center justify-between">
                         <Typography className="text-sm font-semibold">{data.order_uuid}</Typography>
-                        <Typography className="text-sm font-semibold">{data.updatedAt.slice(0, 10)}</Typography>
+                        <Typography className="text-sm font-semibold">{updatedAt}</Typography>
                     </div>
                     <ul className="my-4 grid gap-1 border-y md:grid-cols-3 md:gap-3">
-                        {data.items.slice(0, 3).map((item, index) => (
-                            <li key={index}>
+                        {items.slice(0, 3).map((item, index) => (
+                            <li key={item.id || item.product_id || item.slug || index}>
                                 <CustomOrderProductCard data={item} />
                             </li>
                         ))}
-                        {data.items.length > 3 && (
+                        {items.length > 3 && (
                             <li className="border-t py-4 md:col-span-3">
                                 <Typography className="text-sm font-medium">
-                                    Và {data.items.length - 3} sản phẩm khác
+                                    Và {items.length - 3} sản phẩm khác
                                 </Typography>
                             </li>
                         )}

@@ -160,13 +160,8 @@ export function CustomAddressSelection({ address, onChange }) {
 
         onChange('province', province.name);
 
-        onChange('district', '');
-        onChange('ward', '');
-
         setDistricts([]);
         setWards([]);
-
-        handleGetDistricts(province.code);
     };
 
     const handleDistrictChange = (value) => {
@@ -178,11 +173,7 @@ export function CustomAddressSelection({ address, onChange }) {
 
         onChange('district', district.name);
 
-        onChange('ward', '');
-
         setWards([]);
-
-        handleGetWards(district.code);
     };
 
     const handleWardChange = (value) => {

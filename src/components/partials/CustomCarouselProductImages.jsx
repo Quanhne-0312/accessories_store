@@ -14,7 +14,7 @@ function CustomCarouselProductImages({ images = [], featureImageUrl, productName
                       thumbnail_url: featureImageUrl,
                   }
                 : null,
-            ...images,
+            ...(Array.isArray(images) ? images : []),
         ].filter((image) => image?.secure_url);
 
         return normalizedImages

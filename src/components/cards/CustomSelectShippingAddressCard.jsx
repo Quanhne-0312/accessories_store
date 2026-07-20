@@ -22,18 +22,23 @@ function CustomSelectShippingAddressCard({ onChangeAddress }) {
     const { isLogged, data: currentUser } = useSelector((state) => state.auth);
 
     useEffect(() => {
-        if (openAccordion === 1) {
+        if (openAccordion === 1 && isLogged) {
             onChangeAddress({
                 receiver_name: currentUser.name,
                 receiver_phone: currentUser.phone_number,
                 receiver_address: currentUser.address,
             });
-        } else {
+        } else if (openAccordion === 2) {
             onChangeAddress(shippingAddress);
         }
-
-        return () => onChangeAddress({});
-    }, [openAccordion]);
+    }, [
+        openAccordion,
+        isLogged,
+        shippingAddress,
+        currentUser.name,
+        currentUser.phone_number,
+        currentUser.address,
+    ]);
 
     useEffect(() => {
         if (isLogged) {
@@ -41,46 +46,45 @@ function CustomSelectShippingAddressCard({ onChangeAddress }) {
         } else {
             setOpenAccordion(2);
         }
-
-        return () => setOpenAccordion(2);
     }, [isLogged]);
 
+    useEffect(() => {
+        const values = [
+            receiverAddress.location,
+            receiverAddress.ward,
+            receiverAddress.district,
+            receiverAddress.province,
+        ].map((value) => (typeof value === 'string' ? value.trim() : ''));
+        const formattedAddress = values.every(Boolean) ? values.join(' - ') : '';
+
+        setShippingAddress((prevState) =>
+            prevState.receiver_address === formattedAddress
+                ? prevState
+                : {
+                      ...prevState,
+                      receiver_address: formattedAddress,
+                  },
+        );
+    }, [receiverAddress]);
+
     const handleOpen = (value) => setOpenAccordion(value);
-
-    const handleSelectDefaultAddress = () => {
-        onChangeAddress({
-            receiver_name: currentUser.name,
-            receiver_phone: currentUser.phone_number,
-            receiver_address: currentUser.address,
-        });
-    };
-
-    const handleSelectNewAddress = () => {
-        onChangeAddress(shippingAddress);
-    };
 
     const handleOnChange = (key, value) => {
         setShippingAddress((prevState) => ({
             ...prevState,
             [key]: value,
         }));
-
-        if (openAccordion === 2) {
-            onChangeAddress(shippingAddress);
-        }
     };
 
     const handleOnChangeAddress = (key, value) => {
         setReceiverAddress((prevState) => ({
             ...prevState,
-            [key]: value,
+            ...(key === 'province'
+                ? { province: value, district: '', ward: '' }
+                : key === 'district'
+                ? { district: value, ward: '' }
+                : { [key]: value }),
         }));
-
-        const { location, ...rest } = receiverAddress;
-
-        const addressArray = Object.values(rest);
-
-        handleOnChange('receiver_address', [...addressArray, location].reverse().join(' - '));
     };
 
     return (
@@ -100,7 +104,6 @@ function CustomSelectShippingAddressCard({ onChangeAddress }) {
                     >
                         <AccordionHeader
                             onClick={() => {
-                                handleSelectDefaultAddress();
                                 handleOpen(1);
                             }}
                             className={`border-b-0 text-sm font-semibold transition-none ${
@@ -127,7 +130,6 @@ function CustomSelectShippingAddressCard({ onChangeAddress }) {
                     <AccordionHeader
                         onClick={() => {
                             handleOpen(2);
-                            handleSelectNewAddress();
                         }}
                         className={`border-b-0 text-sm font-semibold transition-none ${
                             openAccordion === 2 ? 'text-blue-500' : null

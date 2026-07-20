@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Card, CardHeader, CardBody, Typography } from '@material-tailwind/react';
+import DOMPurify from 'dompurify';
 
 export function CustomProfileInfoCard({ data, action }) {
     const details = [
@@ -56,7 +57,7 @@ export function CustomProfileInfoCard({ data, action }) {
                                 </div>
                             ) : (
                                 <Typography variant="small" className="font-normal">
-                                    {data[item.key] ?? ''}
+                                    {data?.[item.key] ?? ''}
                                 </Typography>
                             )}
                         </li>
@@ -68,7 +69,7 @@ export function CustomProfileInfoCard({ data, action }) {
                 {data?.bio ? (
                     <div
                         className="description text-sm"
-                        dangerouslySetInnerHTML={{ __html: data?.bio }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.bio) }}
                     />
                 ) : (
                     <Typography className="description text-sm italic">

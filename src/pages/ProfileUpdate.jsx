@@ -1,13 +1,68 @@
-import CustomUserEditorForm from '@/components/layouts/CustomUserEditorForm';
 import CustomConfirmDialog from '@/components/layouts/CustomConfirmDialog';
+import CustomUserEditorForm from '@/components/layouts/CustomUserEditorForm';
 import CustomCrudGroupButtons from '@/components/partials/CustomCrudGroupButtons';
 import { updateProfile } from '@/redux/actions/authAction';
-import { authService } from '@/services';
-import { Card, CardBody, CardFooter } from '@material-tailwind/react';
+import { authService, imageService } from '@/services';
 import _ from 'lodash';
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+
+const emptyAddress = {
+    location: '',
+    ward: '',
+    district: '',
+    province: '',
+};
+
+const formatDate = (date) => {
+    if (!date) return '';
+
+    const localeDate = new Date(date);
+    if (Number.isNaN(localeDate.getTime())) return '';
+
+    const day = localeDate.getDate().toString().padStart(2, '0');
+    const month = (localeDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = localeDate.getFullYear();
+    return `${year}-${month}-${day}`;
+};
+
+const convertAddressToObject = (address) => {
+    if (!address) return { ...emptyAddress };
+
+    if (typeof address === 'object') {
+        return {
+            ...emptyAddress,
+            ...address,
+        };
+    }
+
+    if (typeof address !== 'string') return { ...emptyAddress };
+
+    const parts = address
+        .split(/\s+-\s+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    if (parts.length < 4) {
+        return {
+            ...emptyAddress,
+            location: address.trim(),
+        };
+    }
+
+    const province = parts.pop() || '';
+    const district = parts.pop() || '';
+    const ward = parts.pop() || '';
+    const location = parts.join(' - ');
+    return { location, ward, district, province };
+};
+
+const convertAddressToString = (address = {}) =>
+    [address.location, address.ward, address.district, address.province]
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean)
+        .join(' - ');
 
 export function ProfileUpdate() {
     const [profile, setProfile] = useState({});
@@ -19,142 +74,26 @@ export function ProfileUpdate() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (currentUser) {
-            const birth = handleFormatDate(currentUser?.birth);
-            const address = handleConvertAddressToObject(currentUser?.address);
+        if (!currentUser || _.isEmpty(currentUser)) return;
 
-            setProfile({
-                ...currentUser,
-                birth,
-                address,
-            });
-
-            setDefaultProfile({
-                ...currentUser,
-                birth,
-                address,
-            });
-        }
-
-        return () => {
-            setProfile({});
-            setDefaultProfile({});
+        const normalizedProfile = {
+            ...currentUser,
+            birth: formatDate(currentUser.birth),
+            address: convertAddressToObject(currentUser.address),
         };
+
+        setProfile(normalizedProfile);
+        setDefaultProfile(normalizedProfile);
     }, [currentUser]);
 
     useEffect(() => {
-        if (_.isEqual(defaultProfile, profile)) {
-            setUpdatable(false);
-        } else {
-            setUpdatable(true);
-        }
-
-        return () => setUpdatable(false);
+        setUpdatable(!_.isEqual(defaultProfile, profile));
     }, [defaultProfile, profile]);
-
-    const handleFormatDate = (date) => {
-        const localeDate = new Date(date);
-        const day = localeDate.getDate().toString().padStart(2, '0');
-        const month = (localeDate.getMonth() + 1).toString().padStart(2, '0');
-        const year = localeDate.getFullYear();
-        return `${year}-${month}-${day}`;
-    };
-
-    const handleConvertAddressToObject = (address) => {
-        const slicedAddress = address.split('-').filter((item) => item !== '');
-
-        const province = slicedAddress.pop().trim();
-        const district = slicedAddress.pop().trim();
-        const ward = slicedAddress.pop().trim();
-        const location = slicedAddress.join('-');
-        return { location, ward, district, province };
-    };
-
-    const handleConvertAddressToString = (address) => {
-        const values = [address.location, address.ward, address.district, address.province];
-        return values.join(' - ');
-    };
 
     const handleOnChangeInput = (key, value) => {
         setProfile((prevState) => ({
             ...prevState,
             [key]: value,
-        }));
-    };
-
-    const handleUpdateProfile = async (data) => {
-        try {
-            setDialog((prevState) => ({
-                ...prevState,
-                status: 'PENDING',
-                text: 'Đang xử lý thông tin...',
-            }));
-
-            const response = await new Promise((resolve) => {
-                setTimeout(async () => {
-                    const result = await authService.updateProfileService(data);
-                    resolve(result);
-                }, 2000);
-            });
-
-            if (response && response.code === 'SUCCESS') {
-                setDialog((prevState) => ({
-                    ...prevState,
-                    status: 'SUCCESS',
-                    text: `Cập nhật thông tin thành công!`,
-                }));
-
-                let countdown = 50;
-                const countdownInterval = setInterval(() => {
-                    setDialog((prevState) => ({
-                        ...prevState,
-                        countdown: countdown / 10,
-                    }));
-                    countdown = countdown - 1;
-                    if (countdown === 0) {
-                        clearInterval(countdownInterval);
-                        const address = handleConvertAddressToString(data.address);
-                        dispatch(updateProfile({ ...data, address }));
-                        navigate(-1);
-                    }
-                }, 100);
-            } else {
-                setDialog((prevState) => ({
-                    ...prevState,
-                    status: 'ERROR',
-                    btnConfirm: 'Thử lại',
-                    text: 'Cập nhật thông tin không thành công!',
-                }));
-            }
-        } catch (error) {
-            setDialog((prevState) => ({
-                ...prevState,
-                status: 'ERROR',
-                btnConfirm: 'Thử lại',
-                text: error?.message || error || 'Cập nhật thông tin không thành công!',
-            }));
-        }
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        handleUpdateProfile(profile);
-    };
-
-    /** 3. Active dialog */
-
-    const handleOpenUpdateDialog = () => {
-        setDialog((prevState) => ({
-            ...prevState,
-            open: true,
-            status: 'READY',
-            title: 'Cập nhật thông tin tài khoản',
-            text: 'Xác nhận cập nhật thông tin tài khoản?',
-            handler: handleCloseDialog,
-            btnCancel: 'Hủy',
-            onCancel: handleCloseDialog,
-            btnConfirm: 'Cập nhật',
-            onConfirm: handleSubmit,
         }));
     };
 
@@ -165,15 +104,94 @@ export function ProfileUpdate() {
         }));
     };
 
-    const handleCancel = async () => {
-        if (profile.avatar_url && profile.avatar_url !== defaultProfile.avatar_url) {
-            const result = await handleCloudinaryUploadRollback([profile?.avatar_url]);
-            if (result) {
-                navigate(-1);
+    const handleUpdateProfile = async (data) => {
+        setDialog((prevState) => ({
+            ...prevState,
+            status: 'PENDING',
+            text: 'Đang xử lý thông tin...',
+            btnConfirm: null,
+            btnCancel: null,
+        }));
+
+        try {
+            const response = await authService.updateProfileService(data);
+
+            if (response?.code !== 'SUCCESS') {
+                setDialog((prevState) => ({
+                    ...prevState,
+                    status: 'ERROR',
+                    btnConfirm: 'Thử lại',
+                    btnCancel: 'Đóng',
+                    onConfirm: () => handleUpdateProfile(profile),
+                    onCancel: handleCloseDialog,
+                    text: response?.message || 'Cập nhật thông tin không thành công!',
+                }));
+                return;
             }
-        } else {
-            navigate(-1);
+
+            const oldAvatar = defaultProfile?.avatar;
+            const nextAvatar = data?.avatar;
+
+            // Delete the old Cloudinary image only after the database update has
+            // succeeded, so cancelling or a failed update cannot break the avatar.
+            if (oldAvatar?.public_id && nextAvatar?.public_id && oldAvatar.public_id !== nextAvatar.public_id) {
+                void imageService.rollbackCloudUpload([{ public_id: oldAvatar.public_id }]);
+            }
+
+            const address = convertAddressToString(data.address);
+            dispatch(updateProfile({ ...data, address }));
+
+            setDialog((prevState) => ({
+                ...prevState,
+                status: 'SUCCESS',
+                text: 'Cập nhật thông tin thành công!',
+                btnConfirm: 'Đóng',
+                onConfirm: () => {
+                    handleCloseDialog();
+                    navigate(-1);
+                },
+            }));
+        } catch (error) {
+            setDialog((prevState) => ({
+                ...prevState,
+                status: 'ERROR',
+                btnConfirm: 'Thử lại',
+                btnCancel: 'Đóng',
+                onConfirm: () => handleUpdateProfile(profile),
+                onCancel: handleCloseDialog,
+                text: error?.message || 'Cập nhật thông tin không thành công!',
+            }));
         }
+    };
+
+    const handleSubmit = (event) => {
+        event?.preventDefault?.();
+        handleUpdateProfile(profile);
+    };
+
+    const handleOpenUpdateDialog = () => {
+        setDialog({
+            open: true,
+            status: 'READY',
+            title: 'Cập nhật thông tin tài khoản',
+            text: 'Xác nhận cập nhật thông tin tài khoản?',
+            handler: handleCloseDialog,
+            btnCancel: 'Hủy',
+            onCancel: handleCloseDialog,
+            btnConfirm: 'Cập nhật',
+            onConfirm: handleSubmit,
+        });
+    };
+
+    const handleCancel = () => {
+        const currentAvatar = profile?.avatar;
+        const originalAvatar = defaultProfile?.avatar;
+
+        if (currentAvatar?.public_id && currentAvatar.public_id !== originalAvatar?.public_id) {
+            void imageService.rollbackCloudUpload([{ public_id: currentAvatar.public_id }]);
+        }
+
+        navigate(-1);
     };
 
     return (
@@ -182,7 +200,7 @@ export function ProfileUpdate() {
                 <div className="p-4">
                     {!_.isEmpty(profile) && <CustomUserEditorForm data={profile} onChange={handleOnChangeInput} />}
                 </div>
-                <div className='p-4'>
+                <div className="p-4">
                     <CustomCrudGroupButtons
                         btnConfirn={{
                             text: 'Lưu lại',

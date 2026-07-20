@@ -2,7 +2,7 @@ import CustomProductCard from '@/components/cards/CustomProductCard';
 import CustomFilter from '@/components/shared/CustomFilter';
 import { productService } from '@/services';
 import { Card, Chip, Typography } from '@material-tailwind/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 
@@ -16,7 +16,8 @@ const toQueryString = (values) => (values.length > 0 ? values.join(',') : undefi
 
 function Collection() {
     const [isLoading, setLoading] = useState(false);
-    const [isLoadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [isFetchingMore, setFetchingMore] = useState(false);
     const [products, setProducts] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -27,6 +28,7 @@ function Collection() {
     const [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation();
     const searchKeyword = new URLSearchParams(location.search).get('q');
+    const listRequestIdRef = useRef(0);
 
     const activeCategories = useMemo(() => {
         if (selectedFilters.category.length > 0) {
@@ -60,40 +62,90 @@ function Collection() {
     }, [filterMenu, selectedFilters]);
 
     const handleGetProducts = async (categories, page, filters) => {
-        setLoading(true);
-        const response = await productService.getProductsService(categories, page, filters);
-        if (response && response.code === 'SUCCESS') {
-            const { page, total_pages, total_results, result } = response;
-            setProducts(result || []);
-            setCurrentPage(Number(page));
-            setTotalPages(Number(total_pages) || 1);
-            setTotalResults(Number(total_results) || 0);
+        const requestId = ++listRequestIdRef.current;
+
+        try {
+            setLoading(true);
+            const response = await productService.getProductsService(categories, page, filters);
+            if (requestId !== listRequestIdRef.current) return;
+
+            if (response?.code === 'SUCCESS') {
+                const { page: responsePage, total_pages, total_results, result } = response;
+                const nextPage = Number(responsePage) || 1;
+                const nextTotalPages = Number(total_pages) || 1;
+                setProducts(Array.isArray(result) ? result.filter(Boolean) : []);
+                setCurrentPage(nextPage);
+                setTotalPages(nextTotalPages);
+                setTotalResults(Number(total_results) || 0);
+                setHasMore(nextPage < nextTotalPages);
+            } else {
+                setProducts([]);
+                setHasMore(false);
+            }
+        } finally {
+            if (requestId === listRequestIdRef.current) {
+                setLoading(false);
+            }
         }
-        setLoading(false);
     };
 
     const handleInfinityGetProducts = async (categories, page, filters) => {
-        setLoading(true);
-        const response = await productService.getProductsService(categories, page, filters);
-        if (response && response.code === 'SUCCESS') {
-            const { page, result } = response;
-            setCurrentPage(Number(page));
-            setProducts((prevState) => [...prevState, ...(result || [])]);
+        if (isFetchingMore) return;
+
+        const requestId = listRequestIdRef.current;
+        try {
+            setFetchingMore(true);
+            const response = await productService.getProductsService(categories, page, filters);
+            if (requestId !== listRequestIdRef.current) return;
+
+            if (response?.code === 'SUCCESS') {
+                const responsePage = Number(response.page) || page;
+                const nextItems = Array.isArray(response.result) ? response.result.filter(Boolean) : [];
+                setCurrentPage(responsePage);
+                setProducts((prevState) => {
+                    const knownIds = new Set(prevState.map((item) => item?.id || item?.slug));
+                    return [
+                        ...prevState,
+                        ...nextItems.filter((item) => !knownIds.has(item?.id || item?.slug)),
+                    ];
+                });
+                setHasMore(responsePage < (Number(response.total_pages) || totalPages));
+            } else {
+                setHasMore(false);
+            }
+        } finally {
+            if (requestId === listRequestIdRef.current) {
+                setFetchingMore(false);
+            }
         }
-        setLoading(false);
     };
 
     const handleSearchProducts = async (keyword, page) => {
-        setLoading(true);
-        const response = await productService.searchProductsService(keyword, page);
-        if (response && response.code === 'SUCCESS') {
-            const { page, total_pages, total_results, result } = response;
-            setProducts(result || []);
-            setCurrentPage(Number(page));
-            setTotalPages(Number(total_pages) || 1);
-            setTotalResults(Number(total_results) || 0);
+        const requestId = ++listRequestIdRef.current;
+
+        try {
+            setLoading(true);
+            const response = await productService.searchProductsService(keyword, page);
+            if (requestId !== listRequestIdRef.current) return;
+
+            if (response?.code === 'SUCCESS') {
+                const { page: responsePage, total_pages, total_results, result } = response;
+                const nextPage = Number(responsePage) || 1;
+                const nextTotalPages = Number(total_pages) || 1;
+                setProducts(Array.isArray(result) ? result.filter(Boolean) : []);
+                setCurrentPage(nextPage);
+                setTotalPages(nextTotalPages);
+                setTotalResults(Number(total_results) || 0);
+                setHasMore(nextPage < nextTotalPages);
+            } else {
+                setProducts([]);
+                setHasMore(false);
+            }
+        } finally {
+            if (requestId === listRequestIdRef.current) {
+                setLoading(false);
+            }
         }
-        setLoading(false);
     };
 
     const handleToggleFilter = (filterType, value) => {
@@ -117,12 +169,10 @@ function Collection() {
     };
 
     const handleGetProductsCount = useCallback(async () => {
-        setLoading(true);
         const response = await productService.getProductsCountService();
         if (response && response.code === 'SUCCESS') {
-            setFilterMenu(response.result);
+            setFilterMenu(Array.isArray(response.result) ? response.result.filter(Boolean) : []);
         }
-        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -160,13 +210,19 @@ function Collection() {
     }, [selectedFilters]);
 
     useEffect(() => {
+        setFetchingMore(false);
+
         if (searchKeyword) {
-            setLoadingMore(false);
+            setHasMore(false);
             handleSearchProducts(searchKeyword, 1);
         } else {
-            setLoadingMore(false);
+            setHasMore(false);
             handleGetProducts(activeCategories, 1, activeFilters);
         }
+
+        return () => {
+            listRequestIdRef.current += 1;
+        };
     }, [activeCategories, activeFilters.materials, activeFilters.colors, searchKeyword]);
 
     useEffect(() => {
@@ -187,12 +243,8 @@ function Collection() {
         };
     }, [handleGetProductsCount]);
 
-    useEffect(() => {
-        setLoadingMore(totalPages > currentPage);
-    }, [totalPages, currentPage]);
-
     const handleInfiniteScroll = () => {
-        if (isLoadingMore) {
+        if (hasMore && !isFetchingMore) {
             handleInfinityGetProducts(activeCategories, currentPage + 1, activeFilters);
         }
     };
@@ -234,8 +286,8 @@ function Collection() {
                         <InfiniteScroll
                             dataLength={products.length}
                             next={handleInfiniteScroll}
-                            hasMore={isLoadingMore}
-                            loader={isLoadingMore ? <CustomProductCard /> : null}
+                            hasMore={hasMore}
+                            loader={isFetchingMore ? <CustomProductCard /> : null}
                             className="grid w-full grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                         >
                             {products.map((item) => (

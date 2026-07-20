@@ -20,24 +20,34 @@ export const getPaymentMethodsService = async () => {
 export const checkoutService = async (data) => {
     const path = 'order/checkout';
     const payload = data;
+    const accessToken = store.getState().auth.accessToken;
 
     try {
-        const result = await publicRequest.postApi(path, payload);
+        const result = await authorizationRequest.postApi(path, payload, accessToken);
         return result;
     } catch (error) {
         console.log(error);
+        return (
+            error.response?.data || {
+                code: 'NETWORK_ERROR',
+                message: 'Không thể kết nối tới máy chủ. Vui lòng thử lại.',
+            }
+        );
     }
 };
 
 export const getOneOrderByUuidService = async (order_uuid) => {
     const path = 'order/get';
+    const { isLogged, accessToken } = store.getState().auth;
 
     const payload = {
         order_uuid,
     };
 
     try {
-        const result = await publicRequest.getApi(path, payload);
+        const result = isLogged || accessToken
+            ? await authorizationRequest.getApi(path, payload, accessToken)
+            : await publicRequest.getApi(path, payload);
         return result;
     } catch (error) {
         console.log(error);
@@ -46,6 +56,7 @@ export const getOneOrderByUuidService = async (order_uuid) => {
 
 export const getOrdersByConditionService = async (order_uuids, phone_number) => {
     const path = 'order/get';
+    const { isLogged, accessToken } = store.getState().auth;
 
     const payload = {
         encoded_uuids: order_uuids,
@@ -53,7 +64,9 @@ export const getOrdersByConditionService = async (order_uuids, phone_number) => 
     };
 
     try {
-        const result = await publicRequest.getApi(path, payload);
+        const result = isLogged || accessToken
+            ? await authorizationRequest.getApi(path, payload, accessToken)
+            : await publicRequest.getApi(path, payload);
         return result;
     } catch (error) {
         console.log(error);
@@ -68,6 +81,11 @@ export const cancelOrderService = async (order_uuid) => {
         return result;
     } catch (error) {
         console.log(error);
-        return error.response?.data;
+        return (
+            error.response?.data || {
+                code: 'NETWORK_ERROR',
+                message: 'Không thể kết nối tới máy chủ. Vui lòng thử lại.',
+            }
+        );
     }
 };

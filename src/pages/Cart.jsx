@@ -1,62 +1,71 @@
-import { Button, Input, Progress } from "@material-tailwind/react";
-import { Select, Option } from "@material-tailwind/react";
-import HorizontalProductCard from "../components/partials/HorizontalProductCard";
+import CustomCartProductCard from '@/components/cards/CustomCartProductCard';
+import CustomCurrencyDisplay from '@/components/shared/CustomCurrencyDisplay';
+import { routes } from '@/routes';
+import { Button, Card, CardBody, Typography } from '@material-tailwind/react';
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
 function Cart() {
+    const cart = useSelector((state) => state.cart);
+    const navigate = useNavigate();
+    const items = Array.isArray(cart.items) ? cart.items : [];
+
     return (
-        <div className="px-4 grid gap-4">
-            <div className="grid place-items-center">
-                <h1 className="pt-6 pb-2">Giỏ hàng</h1>
-                <div className="w-full lg:w-[50%]">
-                    <Progress size="sm" value={100} />
+        <div className="mx-auto grid min-h-screen w-full max-w-[1440px] gap-6 p-4 py-10 lg:grid-cols-[1fr_360px]">
+            <section>
+                <div className="mb-6 flex items-end justify-between gap-4 border-b border-blue-gray-100 pb-4">
+                    <Typography as="h1" className="text-2xl font-semibold">
+                        Giỏ hàng
+                    </Typography>
+                    <Typography className="text-sm text-blue-gray-500">{Number(cart.quantity) || 0} sản phẩm</Typography>
                 </div>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-3 mt-6">
-                <div className="grid gap-4 lg:col-span-2">
-                    <div className="hidden lg:grid grid-cols-4 border-b border-indigo-500">
-                        <p className="col-span-2 text-center text-base font-bold uppercase">Sản phẩm</p>
-                        <p className="col-span-1 text-center text-base font-bold uppercase">Số lượng</p>
-                        <p className="col-span-1 text-center text-base font-bold uppercase">Tổng</p>
-                    </div>
+
+                {items.length > 0 ? (
                     <div className="grid gap-4">
-                        {[1, 2, 3, 4].map((item) => (
-                            <HorizontalProductCard
-                                data={{
-                                    feature_image_url: 'https://www.junie.vn/cdn/shop/files/bong-tai-allie-02.jpg?v=1684570889&width=92',
-                                    name: "day chuyen abc",
-                                    material: "bac",
-                                    price: 100000,
-                                    quantity: 1,
-                                }}
-                                key={item}
-                            />
+                        {items.map((item) => (
+                            <CustomCartProductCard key={item.id || item.slug} data={item} />
                         ))}
                     </div>
-                    <div className="grid gap-4">
-                        <Select className="grid place-items-center" label="Quốc gia">
-                            <Option>Việt nam</Option>
-                            <Option>chine</Option>
-                            <Option>Usa</Option>
-                        </Select>
-                        <Input label="Zip" />
-                    </div>
+                ) : (
+                    <Card shadow={false} className="border border-blue-gray-100">
+                        <CardBody className="grid min-h-[280px] place-items-center text-center">
+                            <div>
+                                <Typography className="text-lg font-semibold">Giỏ hàng đang trống</Typography>
+                                <Typography className="mt-2 text-sm text-blue-gray-500">
+                                    Chọn sản phẩm phù hợp và thêm vào giỏ để tiếp tục.
+                                </Typography>
+                            </div>
+                        </CardBody>
+                    </Card>
+                )}
+            </section>
+
+            <aside className="h-max rounded-lg border border-blue-gray-100 bg-brown-50 p-5">
+                <Typography className="text-lg font-semibold">Tóm tắt đơn hàng</Typography>
+                <div className="my-5 flex items-center justify-between border-y border-blue-gray-100 py-4">
+                    <Typography className="text-sm font-medium">Tạm tính</Typography>
+                    <CustomCurrencyDisplay className="font-semibold text-red-600" value={Number(cart.subtotal) || 0} />
                 </div>
-                <div className="lg:col-span-1 p-4 grid gap-4 bg-brown-50 rounded-md">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold">Tổng</span>
-                        <span className="text-sm">60000</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold">giảm</span>
-                        <span className="text-sm">-60000</span>
-                    </div>
-                    <Input label="Ghi chú đơn hàng" />
-                    <Button className="text-xs">thanh toán</Button>
+                <div className="grid gap-3">
+                    <Button
+                        color="red"
+                        variant="gradient"
+                        disabled={items.length === 0}
+                        onClick={() => navigate(routes.checkout)}
+                        fullWidth
+                    >
+                        Thanh toán
+                    </Button>
+                    <Button
+                        color="blue-gray"
+                        variant="outlined"
+                        onClick={() => navigate(routes.collections.replace(':slug', 'all'))}
+                        fullWidth
+                    >
+                        Tiếp tục mua sắm
+                    </Button>
                 </div>
-            </div>
-            <div>
-                <h2>Có thể bạn cũng thích</h2>
-            </div>
+            </aside>
         </div>
     );
 }

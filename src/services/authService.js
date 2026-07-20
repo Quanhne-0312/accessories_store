@@ -1,5 +1,6 @@
 import * as publicRequest from '@/utils/public-request';
 import * as authorizationRequest from '@/utils/authorization-request';
+import { refreshCustomerTokens } from '@/utils/token-refresh';
 import store from '../redux/store';
 
 /** PUBLIC */
@@ -43,11 +44,12 @@ export const registerService = async (data) => {
 
 export const logoutService = async (phone_number) => {
     const path = 'auth/customer/logout';
+    const accessToken = store.getState().auth.accessToken;
     const payload = {
         phone_number,
     };
     try {
-        const result = await authorizationRequest.postApi(path, payload);
+        const result = await authorizationRequest.postApi(path, payload, accessToken);
         return result;
     } catch (error) {
         console.log(error);
@@ -55,14 +57,8 @@ export const logoutService = async (phone_number) => {
 };
 
 export const refreshTokensService = async () => {
-    const path = 'auth/customer/refresh';
-    const refreshToken = store.getState().auth.refreshToken;
-    const payload = {
-        'x-refresh-token': refreshToken,
-    };
     try {
-        const result = await authorizationRequest.postApi(path, payload);
-        return result;
+        return await refreshCustomerTokens();
     } catch (error) {
         console.log(error);
     }

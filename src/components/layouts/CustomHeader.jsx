@@ -15,8 +15,9 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 
 import { logout } from '@/redux/actions/authAction';
 import { cartItemRemoveAll, openCartModal } from '@/redux/actions/cartActions';
+import { userRemoveAllOrders } from '@/redux/actions/userAction';
 import { routes } from '@/routes';
-import { productService } from '@/services';
+import { authService, productService } from '@/services';
 import {
     Bars3Icon,
     MagnifyingGlassIcon,
@@ -74,8 +75,16 @@ function CustomHeader() {
     };
 
     const handleLogout = () => {
+        // Capture and submit the authenticated logout request before clearing
+        // persisted credentials. Local logout remains immediate even if the
+        // server is unavailable.
+        if (currentUser?.phone_number) {
+            void authService.logoutService(currentUser.phone_number);
+        }
+
         dispatch(logout());
         dispatch(cartItemRemoveAll());
+        dispatch(userRemoveAllOrders());
         navigate(routes.home);
     };
 

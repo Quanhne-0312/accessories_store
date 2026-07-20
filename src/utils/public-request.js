@@ -1,10 +1,9 @@
 import axios from 'axios';
+import apiBaseUrl from './api-base-url';
 
 const request = axios.create({
-    baseURL:
-        import.meta.env.MODE === 'development'
-            ? import.meta.env.VITE_DEVELOPMENT_SERVER_URL
-            : import.meta.env.VITE_PRODUCTION_SERVER_URL,
+    baseURL: apiBaseUrl,
+    timeout: 15000,
 });
 
 export const getApi = async (url, payload) => {

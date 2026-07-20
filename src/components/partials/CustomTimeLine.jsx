@@ -11,7 +11,7 @@ import {
 
 function CustomTimeLine({ data }) {
     const TimeNode = ({ data }) => {
-        const [date, time] = data ? useVietnamDateTime(data?.createdAt) : [0, 0];
+        const [date, time] = useVietnamDateTime(data?.createdAt);
 
         return (
             <TimelineHeader className="relative rounded-xl border border-blue-gray-50 bg-white py-3 pl-4 pr-8 shadow-lg shadow-blue-gray-900/5">
@@ -32,10 +32,10 @@ function CustomTimeLine({ data }) {
                         )}
                     </Typography>
                     <Typography className="self-center text-sm font-bold line-clamp-1">
-                        {data.status_description ?? 'Trạng thái'}
+                        {data?.status_description ?? 'Trạng thái'}
                     </Typography>
                     <Typography className="self-center text-sm font-normal line-clamp-1">
-                        {data.description ?? 'Mô tả trạng thái'}
+                        {data?.description ?? 'Mô tả trạng thái'}
                     </Typography>
                 </div>
             </TimelineHeader>
@@ -45,10 +45,9 @@ function CustomTimeLine({ data }) {
     return (
         <div className="">
             <Timeline>
-                {data &&
-                    data.length > 0 &&
-                    data.map((node, index) => (
-                        <TimelineItem key={index} className="h-28">
+                {Array.isArray(data) &&
+                    data.filter(Boolean).map((node, index) => (
+                        <TimelineItem key={node.id || node.createdAt || index} className="h-28">
                             <TimelineConnector className="!w-[78px]" />
                             <TimeNode data={node} />
                         </TimelineItem>

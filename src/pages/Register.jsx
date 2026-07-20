@@ -47,15 +47,29 @@ function Register() {
     const handleOnChangeAddress = (key, value) => {
         setAddress((prevState) => ({
             ...prevState,
-            [key]: value,
+            ...(key === 'province'
+                ? { province: value, district: '', ward: '' }
+                : key === 'district'
+                ? { district: value, ward: '' }
+                : { [key]: value }),
         }));
-
-        const { location, ...rest } = address;
-
-        const addressArray = Object.values(rest);
-
-        handleOnChange('address', [...addressArray, location].reverse().join(' - '));
     };
+
+    useEffect(() => {
+        const values = [address.location, address.ward, address.district, address.province].map((value) =>
+            typeof value === 'string' ? value.trim() : '',
+        );
+        const formattedAddress = values.every(Boolean) ? values.join(' - ') : '';
+
+        setUserData((prevState) =>
+            prevState.address === formattedAddress
+                ? prevState
+                : {
+                      ...prevState,
+                      address: formattedAddress,
+                  },
+        );
+    }, [address]);
 
     const handleSubmit = (e) => {
         e.preventDefault();

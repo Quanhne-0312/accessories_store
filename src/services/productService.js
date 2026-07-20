@@ -2,6 +2,10 @@ import * as publicRequest from '@/utils/public-request';
 import * as authorizationRequest from '@/utils/authorization-request';
 import store from '../redux/store';
 
+let allProductsCache = null;
+let allProductsCacheExpiresAt = 0;
+let allProductsRequest = null;
+
 /** PUBLIC */
 
 export const getCategoriesService = async () => {
@@ -72,6 +76,39 @@ export const getProductsService = async (categories, page, filters = {}) => {
     } catch (error) {
         console.log(error);
     }
+};
+
+export const getAllProductsService = async () => {
+    const now = Date.now();
+
+    if (allProductsCache && allProductsCacheExpiresAt > now) {
+        return allProductsCache;
+    }
+
+    if (!allProductsRequest) {
+        allProductsRequest = (async () => {
+            const firstResponse = await getProductsService('all', 1);
+            if (firstResponse?.code !== 'SUCCESS') return [];
+
+            const totalPages = Number(firstResponse.total_pages) || 1;
+            const otherPages = Array.from({ length: Math.max(totalPages - 1, 0) }, (_, index) => index + 2);
+            const otherResponses = await Promise.all(
+                otherPages.map((page) => getProductsService('all', page)),
+            );
+
+            const products = [firstResponse, ...otherResponses]
+                .filter((response) => response?.code === 'SUCCESS')
+                .flatMap((response) => response.result || []);
+
+            allProductsCache = products;
+            allProductsCacheExpiresAt = Date.now() + 30000;
+            return products;
+        })().finally(() => {
+            allProductsRequest = null;
+        });
+    }
+
+    return allProductsRequest;
 };
 
 export const getProductBySlugService = async (slug) => {

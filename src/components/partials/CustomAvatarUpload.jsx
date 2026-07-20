@@ -1,21 +1,12 @@
-import { imageService } from '@/services';
 import { PencilIcon } from '@heroicons/react/24/solid';
 import { Avatar, IconButton } from '@material-tailwind/react';
 import PropTypes from 'prop-types';
 import { memo } from 'react';
 
 function CustomAvatarUpload({ avatar, readOnly, onChangeAvatar }) {
-    const handleCloudinaryRollback = async (public_id) => {
-        const destroyImages = [{ public_id }];
-        const response = await imageService.rollbackCloudUpload(destroyImages);
-
-        if (response && response.code === 'SUCCESS') {
-            return true;
-        }
-        return false;
-    };
-
     const handleCloudinaryUpload = () => {
+        if (!window.cloudinary?.openUploadWidget) return;
+
         window.cloudinary.openUploadWidget(
             {
                 cloudName: import.meta.env.VITE_CLOUDINARY_NAME,
@@ -31,7 +22,6 @@ function CustomAvatarUpload({ avatar, readOnly, onChangeAvatar }) {
             (error, result) => {
                 if (!error && result && result.event === 'success') {
                     const { original_filename, public_id, secure_url, thumbnail_url } = result.info;
-                    handleCloudinaryRollback(avatar?.public_id);
                     onChangeAvatar({ original_filename, public_id, secure_url, thumbnail_url });
                 }
             },

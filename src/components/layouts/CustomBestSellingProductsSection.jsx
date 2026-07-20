@@ -8,18 +8,7 @@ function CustomBestSellingProductsSection() {
 
     useEffect(() => {
         const handleGetBestSellingProducts = async () => {
-            const firstResponse = await productService.getProductsService('all', 1);
-            if (firstResponse?.code !== 'SUCCESS') return;
-
-            const totalPages = Number(firstResponse.total_pages) || 1;
-            const otherPages = Array.from({ length: Math.max(totalPages - 1, 0) }, (_, index) => index + 2);
-            const otherResponses = await Promise.all(
-                otherPages.map((page) => productService.getProductsService('all', page)),
-            );
-
-            const allProducts = [firstResponse, ...otherResponses]
-                .filter((response) => response?.code === 'SUCCESS')
-                .flatMap((response) => response.result || []);
+            const allProducts = await productService.getAllProductsService();
 
             setProducts(
                 allProducts

@@ -35,9 +35,18 @@ const voucherRules = {
     },
 };
 
+const phonePattern = /^0\d{9}$/;
+
+const isCompleteShippingAddress = (address) =>
+    Boolean(
+        String(address?.receiver_name || '').trim() &&
+            phonePattern.test(String(address?.receiver_phone || '').trim()) &&
+            String(address?.receiver_address || '').trim(),
+    );
+
 function Checkout() {
     const [isLoading, setLoading] = useState(false);
-    const [allowCheckout, setAllowCheckout] = useState(false);
+    const [checkoutError, setCheckoutError] = useState(null);
     const [customerPhoneNumber, setCustomerPhoneNumber] = useState('');
     const [shippingAddress, setShippingAddress] = useState({});
     const [orderNote, setOrderNote] = useState('');
@@ -49,6 +58,17 @@ function Checkout() {
     const cart = useSelector((state) => state.cart);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+    const allowCheckout = useMemo(
+        () =>
+            Array.isArray(cart.items) &&
+            cart.items.length > 0 &&
+            cart.quantity > 0 &&
+            phonePattern.test(String(customerPhoneNumber).trim()) &&
+            isCompleteShippingAddress(shippingAddress) &&
+            Boolean(paymentMethod?.id),
+        [cart.items, cart.quantity, customerPhoneNumber, paymentMethod?.id, shippingAddress],
+    );
 
     const discountAmount = useMemo(() => {
         if (!appliedVoucher || cart.subtotal < appliedVoucher.minSubtotal) {
@@ -67,14 +87,6 @@ function Checkout() {
             voucher_code: discountAmount > 0 ? appliedVoucher?.code : null,
         });
 
-        return () =>
-            setPaymentDetails({
-                subtotal: 0,
-                shipping_fee: 0,
-                discount: 0,
-                total: 0,
-                voucher_code: null,
-            });
     }, [appliedVoucher, cart.subtotal, discountAmount]);
 
     useEffect(() => {
@@ -82,14 +94,7 @@ function Checkout() {
             setCustomerPhoneNumber(currentUser.phone_number);
         }
 
-        return () => setCustomerPhoneNumber('');
     }, [currentUser?.phone_number, isLogged]);
-
-    useEffect(() => {
-        setAllowCheckout(cart.quantity > 0);
-
-        return () => setAllowCheckout(false);
-    }, [cart.quantity]);
 
     const handleApplyVoucher = (voucherCode) => {
         const code = voucherCode.trim().toUpperCase();
@@ -123,38 +128,47 @@ function Checkout() {
     };
 
     const handleCheckout = async () => {
+        setCheckoutError(null);
+
+        if (!allowCheckout) {
+            setCheckoutError('Vui lòng kiểm tra số điện thoại, địa chỉ nhận hàng và phương thức thanh toán.');
+            return;
+        }
+
         try {
             setLoading(true);
             const response = await orderService.checkoutService({
-                customerPhoneNumber,
+                customerPhoneNumber: String(customerPhoneNumber).trim(),
                 shippingAddress,
                 paymentMethod,
                 paymentDetails,
                 note: orderNote,
                 items: cart.items,
             });
-            if (response) {
-                const { code, result } = response;
-                if (code === 'SUCCESS') {
-                    const orderUuid = result?.order_uuid || result;
-
-                    if (orderUuid) {
-                        sessionStorage.setItem('checkoutSuccessOrderUuid', orderUuid);
-                    }
-
-                    dispatch(cartItemRemoveAll());
-                    dispatch(userPlaceNewOrder(orderUuid));
-                    await persistor.flush();
-                    navigate(routes.checkoutSuccess, {
-                        replace: true,
-                        state: {
-                            orderUuid,
-                        },
-                    });
-                }
+            if (response?.code !== 'SUCCESS') {
+                setCheckoutError(response?.message || 'Đặt hàng không thành công. Vui lòng thử lại.');
+                return;
             }
+
+            const orderUuid = response.result?.order_uuid || response.result;
+            if (!orderUuid) {
+                setCheckoutError('Máy chủ không trả về mã đơn hàng. Vui lòng thử lại.');
+                return;
+            }
+
+            sessionStorage.setItem('checkoutSuccessOrderUuid', orderUuid);
+            dispatch(cartItemRemoveAll());
+            dispatch(userPlaceNewOrder(orderUuid));
+            await persistor.flush();
+            navigate(routes.checkoutSuccess, {
+                replace: true,
+                state: {
+                    orderUuid,
+                },
+            });
         } catch (error) {
             console.log(error);
+            setCheckoutError('Không thể kết nối tới máy chủ. Vui lòng thử lại.');
         } finally {
             setLoading(false);
         }
@@ -183,13 +197,19 @@ function Checkout() {
                             pattern="0+[0-9]{9}"
                             value={customerPhoneNumber}
                             readOnly={isLogged}
-                            onChange={(e) => setCustomerPhoneNumber(e.target.value)}
+                            onChange={(e) => {
+                                setCustomerPhoneNumber(e.target.value);
+                                setCheckoutError(null);
+                            }}
                         />
                     </div>
 
                     <CustomSelectShippingAddressCard
                         data={shippingAddress}
-                        onChangeAddress={(value) => setShippingAddress(value)}
+                        onChangeAddress={(value) => {
+                            setShippingAddress(value);
+                            setCheckoutError(null);
+                        }}
                     />
 
                     <Textarea
@@ -206,7 +226,12 @@ function Checkout() {
                         <CustomDeliveryServiceCard />
                     </div>
 
-                    <CustomSelectPaymentMethodCard onChangePaymentMethod={(value) => setPaymentMethod(value)} />
+                    <CustomSelectPaymentMethodCard
+                        onChangePaymentMethod={(value) => {
+                            setPaymentMethod(value || {});
+                            setCheckoutError(null);
+                        }}
+                    />
                 </div>
 
                 <div className="flex flex-col gap-4 p-4">
@@ -226,6 +251,17 @@ function Checkout() {
 
                         <CustomPaymentDetailsCard data={paymentDetails} />
                     </div>
+
+                    {checkoutError && (
+                        <Typography className="text-center text-sm font-medium text-red-600">
+                            {checkoutError}
+                        </Typography>
+                    )}
+                    {!checkoutError && cart.quantity > 0 && !allowCheckout && (
+                        <Typography className="text-center text-xs font-medium text-blue-gray-500">
+                            Điền đủ số điện thoại, người nhận, địa chỉ và phương thức thanh toán để đặt hàng.
+                        </Typography>
+                    )}
 
                     <Button
                         size="lg"

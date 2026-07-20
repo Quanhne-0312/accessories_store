@@ -6,7 +6,7 @@ import {
     StarIcon,
     TruckIcon,
 } from '@heroicons/react/24/outline';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import CustomDetailsSection, { CustomDetailsSkeleton } from '@/components/layouts/CustomDetailsSection';
 import CustomRatingCountSection from '@/components/layouts/CustomRatingCountSection';
@@ -15,26 +15,51 @@ import { Accordion, AccordionBody, AccordionHeader, Button, Typography } from '@
 import { useParams } from 'react-router-dom';
 import CustomCarouselProductImages from '@/components/partials/CustomCarouselProductImages';
 import CustomProductTestimonialSection from '@/components/layouts/CustomProductTestimonialSection';
+import DOMPurify from 'dompurify';
 
 function ProductDetails() {
     const [isLoading, setLoading] = useState(false);
     const [productData, setProductData] = useState(null);
+    const [error, setError] = useState(null);
     const [open, setOpen] = React.useState(1);
+    const requestIdRef = useRef(0);
     const { slug } = useParams();
 
     const handleGetProductBySlug = async (currentSlug) => {
-        setLoading(true);
-        const response = await productService.getProductBySlugService(currentSlug);
-        if (response && response.code === 'SUCCESS') {
-            setProductData(response.result);
+        const requestId = ++requestIdRef.current;
+
+        try {
+            setLoading(true);
+            setError(null);
+            setProductData(null);
+
+            const response = await productService.getProductBySlugService(currentSlug);
+            if (requestId !== requestIdRef.current) return;
+
+            if (response?.code === 'SUCCESS' && response.result) {
+                setProductData(response.result);
+            } else {
+                setError(response?.message || 'Không tìm thấy sản phẩm.');
+            }
+        } catch (requestError) {
+            if (requestId !== requestIdRef.current) return;
+            console.log(requestError);
+            setError('Không thể tải thông tin sản phẩm. Vui lòng thử lại.');
+        } finally {
+            if (requestId === requestIdRef.current) {
+                setLoading(false);
+            }
         }
-        setLoading(false);
     };
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setOpen(1);
         handleGetProductBySlug(slug);
+
+        return () => {
+            requestIdRef.current += 1;
+        };
     }, [slug]);
 
     const reservation = [
@@ -66,18 +91,30 @@ function ProductDetails() {
         <div>
             <div className="mx-auto grid max-w-[1440px] gap-4 p-4 md:grid-cols-2 md:gap-6 md:p-6 lg:gap-8 xl:gap-12">
                 <div>
-                    {productData ? (
+                    {isLoading ? (
+                        <div className="animate-pulse rounded-lg bg-blue-gray-200 pt-[100%]" />
+                    ) : productData ? (
                         <CustomCarouselProductImages
                             images={productData.images}
                             featureImageUrl={productData.feature_image_url}
                             productName={productData.name}
                         />
                     ) : (
-                        <div className="animate-pulse rounded-lg bg-blue-gray-200 pt-[100%]" />
+                        <div className="rounded-lg bg-blue-gray-50 pt-[100%]" />
                     )}
                 </div>
                 <div>
-                    {productData ? <CustomDetailsSection details={productData} /> : <CustomDetailsSkeleton />}
+                    {isLoading ? (
+                        <CustomDetailsSkeleton />
+                    ) : productData ? (
+                        <CustomDetailsSection details={productData} />
+                    ) : (
+                        <div className="my-6 rounded-lg border border-red-100 bg-red-50 p-6">
+                            <Typography className="text-center font-medium text-red-700">
+                                {error || 'Không tìm thấy sản phẩm.'}
+                            </Typography>
+                        </div>
+                    )}
 
                     <ul className="grid gap-3 rounded-lg border border-blue-gray-100 p-4">
                         {reservation.map((item, index) => (
@@ -119,7 +156,7 @@ function ProductDetails() {
                         <AccordionBody>
                             <div
                                 dangerouslySetInnerHTML={{
-                                    __html: productData.description,
+                                    __html: DOMPurify.sanitize(productData.description || ''),
                                 }}
                             />
                         </AccordionBody>

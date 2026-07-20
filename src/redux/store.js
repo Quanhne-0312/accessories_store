@@ -7,8 +7,8 @@ import cartReducer from './reducers/cartReducer';
 import userReducer from './reducers/userReducer';
 
 const persistConfig = {
-    key: 'root',
-    version: 1,
+    key: 'accessories-store',
+    version: 2,
     storage,
     whitelist: ['auth', 'cart', 'user'],
 };

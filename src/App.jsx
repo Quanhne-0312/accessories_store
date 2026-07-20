@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { privateRoutes, publicRoutes } from './routes';
 import { logout, refreshTokens } from './redux/actions/authAction';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import NotFound from './pages/NotFound';
 
 function ScrollToTop() {
@@ -22,13 +22,16 @@ function ScrollToTop() {
 function App() {
     const dispatch = useDispatch();
     const { isLogged, refreshToken } = useSelector((state) => state.auth);
+    const refreshStarted = useRef(false);
 
     useEffect(() => {
+        if (refreshStarted.current) return;
+        refreshStarted.current = true;
+
         const handleRefreshTokens = async () => {
             try {
                 if (refreshToken) {
-                    dispatch(refreshTokens());
-                    console.log('refresh tokens', new Date());
+                    await dispatch(refreshTokens());
                 } else {
                     dispatch(logout());
                 }
@@ -61,14 +64,9 @@ function App() {
                         <Route
                             key={index}
                             path={route.path}
-                            // render={({ location }) => (
-                            //     <route.Layout>
-                            //         <route.Component location={location} />
-                            //     </route.Layout>
-                            // )}
                             element={
                                 <route.Layout>
-                                    <route.Component location={location} />
+                                    <route.Component />
                                 </route.Layout>
                             }
                         />
