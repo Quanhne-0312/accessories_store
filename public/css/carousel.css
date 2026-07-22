@@ -148,6 +148,12 @@
         transform: scale(1.1);
     }
 }
+
+@media (prefers-reduced-motion: reduce) {
+    .slide.active img {
+        animation: none;
+    }
+}
 @media (min-width: 768px) {
     .custom-prev-arrow span,
     .custom-next-arrow span {
