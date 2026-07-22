@@ -114,7 +114,11 @@ export function ProfileUpdate() {
         }));
 
         try {
-            const response = await authService.updateProfileService(data);
+            const requestData = {
+                ...data,
+                birth: data?.birth || null,
+            };
+            const response = await authService.updateProfileService(requestData);
 
             if (response?.code !== 'SUCCESS') {
                 setDialog((prevState) => ({
@@ -130,7 +134,7 @@ export function ProfileUpdate() {
             }
 
             const oldAvatar = defaultProfile?.avatar;
-            const nextAvatar = data?.avatar;
+            const nextAvatar = requestData?.avatar;
 
             // Delete the old Cloudinary image only after the database update has
             // succeeded, so cancelling or a failed update cannot break the avatar.
@@ -138,8 +142,8 @@ export function ProfileUpdate() {
                 void imageService.rollbackCloudUpload([{ public_id: oldAvatar.public_id }]);
             }
 
-            const address = convertAddressToString(data.address);
-            dispatch(updateProfile({ ...data, address }));
+            const address = convertAddressToString(requestData.address);
+            dispatch(updateProfile({ ...requestData, address }));
 
             setDialog((prevState) => ({
                 ...prevState,

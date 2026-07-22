@@ -2,15 +2,33 @@ import { PencilIcon } from '@heroicons/react/24/solid';
 import { Avatar, IconButton } from '@material-tailwind/react';
 import PropTypes from 'prop-types';
 import { memo } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function CustomAvatarUpload({ avatar, readOnly, onChangeAvatar }) {
     const handleCloudinaryUpload = () => {
-        if (!window.cloudinary?.openUploadWidget) return;
+        const cloudName = import.meta.env.VITE_CLOUDINARY_NAME;
+        const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_CROP_PRESET;
 
-        window.cloudinary.openUploadWidget(
+        if (!window.cloudinary || typeof window.cloudinary.createUploadWidget !== 'function') {
+            toast.error('Cloudinary chưa sẵn sàng. Hãy tải lại trang rồi thử lại.');
+            return;
+        }
+
+        if (!cloudName || !uploadPreset) {
+            toast.error('Thiếu cấu hình Cloudinary trong accessories_store/.env.');
+            return;
+        }
+
+        const widget = window.cloudinary.createUploadWidget(
             {
-                cloudName: import.meta.env.VITE_CLOUDINARY_NAME,
-                uploadPreset: import.meta.env.VITE_CLOUDINARY_CROP_PRESET,
+                cloudName,
+                uploadPreset,
+                ...(apiKey ? { apiKey } : {}),
+                sources: ['local'],
+                resourceType: 'image',
+                multiple: false,
                 cropping: true,
                 croppingAspectRatio: 1,
                 croppingShowDimensions: true,
@@ -20,12 +38,20 @@ function CustomAvatarUpload({ avatar, readOnly, onChangeAvatar }) {
                 maxImageFileSize: 5000000,
             },
             (error, result) => {
+                if (error) {
+                    toast.error(error?.statusText || error?.message || 'Tải ảnh đại diện không thành công!');
+                    return;
+                }
+
                 if (!error && result && result.event === 'success') {
                     const { original_filename, public_id, secure_url, thumbnail_url } = result.info;
                     onChangeAvatar({ original_filename, public_id, secure_url, thumbnail_url });
+                    toast.success('Tải ảnh đại diện thành công. Hãy bấm Lưu lại để hoàn tất.');
                 }
             },
         );
+
+        widget.open();
     };
 
     return (
@@ -47,6 +73,17 @@ function CustomAvatarUpload({ avatar, readOnly, onChangeAvatar }) {
                     <PencilIcon className="h-5 w-5" />
                 </IconButton>
             </div>
+            <ToastContainer
+                position="bottom-right"
+                autoClose={5000}
+                hideProgressBar
+                closeOnClick={false}
+                newestOnTop={false}
+                closeButton={false}
+                pauseOnFocusLoss
+                draggable={false}
+                pauseOnHover
+            />
         </div>
     );
 }

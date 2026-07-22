@@ -74,5 +74,9 @@ export const updateProfileService = async (data) => {
         return result;
     } catch (error) {
         console.log(error);
+        return error?.response?.data ?? {
+            code: 'NETWORK_ERROR',
+            message: 'Không thể kết nối tới máy chủ.',
+        };
     }
 };
